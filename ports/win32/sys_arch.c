@@ -471,18 +471,22 @@ sys_thread_new(const char *name, lwip_thread_fn function, void *arg, int stacksi
 #if LWIP_TCPIP_CORE_LOCKING
 
 static DWORD lwip_core_lock_holder_thread_id;
+static int lwip_core_lock_holder_reclevel = 0;
 
 void
 sys_lock_tcpip_core(void)
 {
   sys_mutex_lock(&lock_tcpip_core);
   lwip_core_lock_holder_thread_id = GetCurrentThreadId();
+  lwip_core_lock_holder_reclevel += 1;
 }
 
 void
 sys_unlock_tcpip_core(void)
 {
-  lwip_core_lock_holder_thread_id = 0;
+  lwip_core_lock_holder_reclevel -= 1;
+  if(!lwip_core_lock_holder_reclevel)
+    lwip_core_lock_holder_thread_id = 0;
   sys_mutex_unlock(&lock_tcpip_core);
 }
 #endif /* LWIP_TCPIP_CORE_LOCKING */

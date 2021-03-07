@@ -204,15 +204,19 @@ sys_thread_new(const char *name, lwip_thread_fn function, void *arg, int stacksi
 
 #if LWIP_TCPIP_CORE_LOCKING
 static pthread_t lwip_core_lock_holder_thread_id;
+static int lwip_core_lock_holder_reclevel = 0;
 void sys_lock_tcpip_core(void)
 {
   sys_mutex_lock(&lock_tcpip_core);
   lwip_core_lock_holder_thread_id = pthread_self();
+  lwip_core_lock_holder_reclevel += 1;
 }
 
 void sys_unlock_tcpip_core(void)
 {
-  lwip_core_lock_holder_thread_id = 0;
+  lwip_core_lock_holder_reclevel -= 1;
+  if(!lwip_core_lock_holder_reclevel)
+    lwip_core_lock_holder_thread_id = 0;
   sys_mutex_unlock(&lock_tcpip_core);
 }
 #endif /* LWIP_TCPIP_CORE_LOCKING */
@@ -591,10 +595,14 @@ err_t
 sys_mutex_new(struct sys_mutex **mutex)
 {
   struct sys_mutex *mtx;
+  pthread_mutexattr_t attr;
 
   mtx = (struct sys_mutex *)malloc(sizeof(struct sys_mutex));
+
   if (mtx != NULL) {
-    pthread_mutex_init(&(mtx->mutex), NULL);
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&(mtx->mutex), &attr);
     *mutex = mtx;
     return ERR_OK;
   }

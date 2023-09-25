@@ -40,6 +40,11 @@
 #pragma warning (disable: 4711) /* The compiler performed inlining on the given function, although it was not marked for inlining */
 #endif
 
+#ifdef __MINGW32__
+#define LWIP_TIMEVAL_PRIVATE 0
+#include <sys/time.h>
+#endif
+
 #ifdef _MSC_VER
 #if _MSC_VER >= 1910
 #include <errno.h> /* use MSVC errno for >= 2017 */
